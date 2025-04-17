@@ -14,13 +14,10 @@ type NumType interface {
 }
 
 type CircularQueue[T NumType] struct {
-	values []T
-	// Индекс будущего элемента в слайсе
-	nextValIdx int
-	// Индекс следующего к удалению элемента
+	values       []T
+	nextValIdx   int
 	nextToDelIdx int
-	// Размер массива без нулей
-	size int
+	size         int
 }
 
 func NewCircularQueue[T NumType](size int) CircularQueue[T] {
@@ -30,40 +27,37 @@ func NewCircularQueue[T NumType](size int) CircularQueue[T] {
 }
 
 func (q *CircularQueue[T]) Push(value T) bool {
-	if !q.Full() {
-		q.values[q.nextValIdx] = value
-		q.nextValIdx = (q.nextValIdx + 1) % len(q.values)
-		q.size++
-		return true
+	if q.Full() {
+		return false
 	}
-	return false // need to implement
+	q.values[q.nextValIdx] = value
+	q.nextValIdx = (q.nextValIdx + 1) % len(q.values)
+	q.size++
+	return true
 }
 
 func (q *CircularQueue[T]) Pop() bool {
-	if !q.Empty() {
-		q.values[q.nextToDelIdx] = 0
-		q.nextToDelIdx = (q.nextToDelIdx + 1) % len(q.values)
-		q.size--
-		return true
+	if q.Empty() {
+		return false
 	}
-	return false // need to implement
+	q.values[q.nextToDelIdx] = 0
+	q.nextToDelIdx = (q.nextToDelIdx + 1) % len(q.values)
+	q.size--
+	return true
 }
 
 func (q *CircularQueue[T]) Front() T {
 	if !q.Empty() {
 		return q.values[q.nextToDelIdx]
 	}
-	return -1 // need to implement
+	return -1
 }
 
 func (q *CircularQueue[T]) Back() T {
-	if !q.Empty() {
-		if q.nextValIdx == 0 {
-			return q.values[len(q.values)-1]
-		}
-		return q.values[q.nextValIdx-1]
+	if q.Empty() {
+		return -1
 	}
-	return -1 // need to implement
+	return q.values[(q.nextValIdx+len(q.values)-1)%len(q.values)]
 }
 
 func (q *CircularQueue[T]) Empty() bool {
