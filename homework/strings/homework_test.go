@@ -9,17 +9,17 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+var initValue = 1
+
 type COWBuffer struct {
 	data []byte
 	refs *int
 }
 
 func NewCOWBuffer(data []byte) COWBuffer {
-	var zeroValue int
-
 	b := COWBuffer{
 		data: data,
-		refs: &zeroValue,
+		refs: &initValue,
 	}
 	runtime.SetFinalizer(&b, func(cb *COWBuffer) {
 		cb.Close()
@@ -32,23 +32,12 @@ func (b *COWBuffer) Clone() COWBuffer {
 		*b.refs++
 		return *b
 	}
-	var zeroValue int
-
-	newCB := COWBuffer{
-		data: b.data,
-		refs: &zeroValue,
-	}
-	return newCB
+	return NewCOWBuffer(b.data)
 }
 
 func (b *COWBuffer) Close() {
-	if b.data == nil {
-		return
-	}
 	if b.refs != nil && *b.refs != 0 {
 		*b.refs--
-	} else {
-		b.data = nil
 	}
 }
 
@@ -59,7 +48,8 @@ func (b *COWBuffer) Update(index int, value byte) bool {
 	if b.refs != nil && *b.refs > 0 {
 		data := make([]byte, len(b.data), cap(b.data))
 		copy(data, b.data)
-		b.data = data
+		*b = NewCOWBuffer(data)
+		*b.refs--
 	}
 	b.data[index] = value
 	return true
