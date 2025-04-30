@@ -8,10 +8,11 @@ import (
 )
 
 func Map(data []int, action func(int) int) []int {
+	newData := make([]int, len(data))
 	for key := range data {
-		data[key] = action(data[key])
+		newData[key] = action(data[key])
 	}
-	return data
+	return newData
 }
 
 func Filter(data []int, action func(int) bool) []int {
