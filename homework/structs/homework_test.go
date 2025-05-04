@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"fmt"
 	"math"
 	"testing"
 	"unsafe"
@@ -18,7 +19,7 @@ func WithName(name string) func(*GamePerson) {
 		for i, b := range buf.Bytes() {
 			p[i] = b
 		}
-		person.personName = &p
+		person.personName = p
 	}
 }
 
@@ -38,61 +39,63 @@ func WithGold(gold int) func(*GamePerson) {
 
 func WithMana(mana int) func(*GamePerson) {
 	return func(person *GamePerson) {
-		person.mana = uint16(mana)
+		person.manaAndRespect[0] = byte(mana)
+		person.manaAndRespect[1] = byte(mana >> 8)
 	}
 }
 
 func WithHealth(health int) func(*GamePerson) {
 	return func(person *GamePerson) {
-		person.health = uint16(health)
+		person.healthAndStrength[0] = byte(health)
+		person.healthAndStrength[1] = byte(health >> 8)
 	}
 }
 
 func WithRespect(respect int) func(*GamePerson) {
 	return func(person *GamePerson) {
-		person.respect = uint8(respect)
+		person.manaAndRespect[1] = byte(respect<<4) | person.manaAndRespect[1]
 	}
 }
 
 func WithStrength(strength int) func(*GamePerson) {
 	return func(person *GamePerson) {
-		person.strength = uint8(strength)
+		person.healthAndStrength[1] = byte(strength<<4) | person.healthAndStrength[1]
 	}
 }
 
 func WithExperience(experience int) func(*GamePerson) {
 	return func(person *GamePerson) {
-		person.experience = uint8(experience)
+		person.levelAndExperience = byte(experience) | person.levelAndExperience
 	}
 }
 
 func WithLevel(level int) func(*GamePerson) {
 	return func(person *GamePerson) {
-		person.level = uint8(level)
+		person.levelAndExperience = byte(level<<4) | person.levelAndExperience
 	}
 }
 
 func WithHouse() func(*GamePerson) {
 	return func(person *GamePerson) {
-		person.hasHome = true
+		person.homeWeaponFamilyFraction = person.homeWeaponFamilyFraction | _WithHome
 	}
 }
 
 func WithGun() func(*GamePerson) {
 	return func(person *GamePerson) {
-		person.hasWeapon = true
+		person.homeWeaponFamilyFraction = person.homeWeaponFamilyFraction | _WithWeapon
 	}
 }
 
 func WithFamily() func(*GamePerson) {
 	return func(person *GamePerson) {
-		person.hasFamily = true
+		person.homeWeaponFamilyFraction = person.homeWeaponFamilyFraction | _WithFamily
 	}
 }
 
 func WithType(personType int) func(*GamePerson) {
 	return func(person *GamePerson) {
-		person.fraction = uint8(personType)
+		person.homeWeaponFamilyFraction = person.homeWeaponFamilyFraction | byte(personType<<3)
 	}
 }
 
@@ -100,24 +103,21 @@ const (
 	BuilderGamePersonType = iota
 	BlacksmithGamePersonType
 	WarriorGamePersonType
+	_WithHome   = 1
+	_WithWeapon = 2
+	_WithFamily = 4
 )
 
 type GamePerson struct {
-	x          int32
-	y          int32
-	z          int32
-	gold       uint32
-	health     uint16
-	mana       uint16
-	fraction   uint8
-	respect    uint8
-	strength   uint8
-	level      uint8
-	experience uint8
-	personName *[42]byte
-	hasHome    bool
-	hasWeapon  bool
-	hasFamily  bool
+	x                        int32
+	y                        int32
+	z                        int32
+	gold                     uint32
+	personName               [42]byte
+	healthAndStrength        [2]byte
+	manaAndRespect           [2]byte
+	levelAndExperience       byte
+	homeWeaponFamilyFraction byte
 }
 
 func NewGamePerson(options ...Option) GamePerson {
@@ -154,48 +154,48 @@ func (p *GamePerson) Gold() int {
 }
 
 func (p *GamePerson) Mana() int {
-	return int(p.mana)
+	return int(p.manaAndRespect[0]) + int(p.manaAndRespect[1]<<6)>>6*256
 }
 
 func (p *GamePerson) Health() int {
-	return int(p.health)
+	return int(p.healthAndStrength[0]) + int(p.healthAndStrength[1]<<6)>>6*256
 }
 
 func (p *GamePerson) Respect() int {
-	return int(p.respect)
+	return int(p.manaAndRespect[1] >> 4)
 }
 
 func (p *GamePerson) Strength() int {
-	return int(p.strength)
+	return int(p.healthAndStrength[1] >> 4)
 }
 
 func (p *GamePerson) Experience() int {
-	return int(p.experience)
+	return int((p.levelAndExperience << 4) >> 4)
 }
 
 func (p *GamePerson) Level() int {
-	return int(p.level)
+	return int(p.levelAndExperience >> 4)
 }
 
 func (p *GamePerson) HasHouse() bool {
-	return p.hasHome
+	return p.homeWeaponFamilyFraction&_WithHome > 0
 }
 
 func (p *GamePerson) HasGun() bool {
-	return p.hasWeapon
+	return p.homeWeaponFamilyFraction&_WithWeapon > 0
 }
 
-func (p *GamePerson) HasFamilty() bool {
-	return p.hasFamily
+func (p *GamePerson) HasFamily() bool {
+	return p.homeWeaponFamilyFraction&_WithFamily > 0
 }
 
 func (p *GamePerson) Type() int {
-	return int(p.fraction)
+	return int(p.homeWeaponFamilyFraction) >> 3
 }
 
 func TestGamePerson(t *testing.T) {
 	assert.LessOrEqual(t, unsafe.Sizeof(GamePerson{}), uintptr(64))
-
+	fmt.Println(unsafe.Sizeof(GamePerson{}))
 	const x, y, z = math.MinInt32, math.MaxInt32, 0
 	const name = "aaaaaaaaaaaaa_bbbbbbbbbbbbb_cccccccccccccc"
 	const personType = BuilderGamePersonType
@@ -235,7 +235,7 @@ func TestGamePerson(t *testing.T) {
 	assert.Equal(t, experience, person.Experience())
 	assert.Equal(t, level, person.Level())
 	assert.True(t, person.HasHouse())
-	assert.True(t, person.HasFamilty())
+	assert.True(t, person.HasFamily())
 	assert.False(t, person.HasGun())
 	assert.Equal(t, personType, person.Type())
 }
