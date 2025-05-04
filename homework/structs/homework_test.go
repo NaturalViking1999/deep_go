@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"fmt"
 	"math"
 	"testing"
 	"unsafe"
@@ -195,7 +194,7 @@ func (p *GamePerson) Type() int {
 
 func TestGamePerson(t *testing.T) {
 	assert.LessOrEqual(t, unsafe.Sizeof(GamePerson{}), uintptr(64))
-	fmt.Println(unsafe.Sizeof(GamePerson{}))
+
 	const x, y, z = math.MinInt32, math.MaxInt32, 0
 	const name = "aaaaaaaaaaaaa_bbbbbbbbbbbbb_cccccccccccccc"
 	const personType = BuilderGamePersonType
