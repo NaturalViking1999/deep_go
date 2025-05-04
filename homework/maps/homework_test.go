@@ -26,36 +26,22 @@ func NewOrderedMap[T cmp.Ordered]() OrderedMap[T] {
 }
 
 func (m *OrderedMap[T]) Insert(key T, value any) {
-	x := m.node
-	var y *Node[T] = nil
+	m.node = m.insert(key, value, m.node)
+}
 
-	for x != nil {
-		compared := compare(key, x.key)
-		if compared == 0 {
-			x.value = value
-			return
-		} else {
-			y = x
-			if compared < 0 {
-				x = x.left
-			} else {
-				x = x.right
-			}
-		}
+func (m *OrderedMap[T]) insert(key T, value any, node *Node[T]) *Node[T] {
+	if node == nil {
+		m.size++
+		return &Node[T]{key: key, value: value}
 	}
-
-	newNode := &Node[T]{key: key, value: value}
-	if y == nil {
-		m.node = newNode
-	} else {
-		compared := compare(key, y.key)
-		if compared < 0 {
-			y.left = newNode
-		} else {
-			y.right = newNode
-		}
+	if key < node.key {
+		node.left = m.insert(key, value, node.left)
 	}
-	m.size++
+	if key > node.key {
+		node.right = m.insert(key, value, node.right)
+	}
+	node.value = value
+	return node
 }
 
 func compare[T cmp.Ordered](k1, k2 T) int {
@@ -69,55 +55,36 @@ func compare[T cmp.Ordered](k1, k2 T) int {
 }
 
 func (m *OrderedMap[T]) Erase(key T) {
-	x := m.node
-	y := &Node[T]{}
+	m.node = m.erase(key, m.node)
+}
 
-	for x != nil {
-		compared := compare(key, x.key)
-		if compared == 0 {
-			break
-		} else {
-			y = x
-			if compared < 0 {
-				x = x.left
-			} else {
-				x = x.right
-			}
-		}
+func (m *OrderedMap[T]) erase(key T, node *Node[T]) *Node[T] {
+	if node == nil {
+		return nil
 	}
-
-	if x == nil {
-		return
+	if key < node.key {
+		node.left = m.erase(key, node.left)
+		return node
 	}
-
-	if x.right == nil {
-		if y == nil {
-			m.node = x.left
-		} else {
-			if x == y.left {
-				y.left = x.left
-			} else {
-				y.right = x.left
-			}
-		}
-	} else {
-		leftMost := x.right
-		y = nil
-		for leftMost.left != nil {
-			y = leftMost
-			leftMost = leftMost.left
-		}
-
-		if y != nil {
-			y.left = leftMost.right
-		} else {
-			x.right = leftMost.right
-		}
-
-		x.key = leftMost.key
-		x.value = leftMost.value
+	if key > node.key {
+		node.right = m.erase(key, node.right)
+		return node
 	}
 	m.size--
+	if node.left == nil {
+		return node.right
+	}
+	if node.right == nil {
+		return node.left
+	}
+	lastChild := node.right
+	for lastChild.left != nil {
+		lastChild = lastChild.left
+	}
+	lastChild.left = node.left
+	lastChild.right = node.right
+	node = lastChild
+	return node
 }
 
 func (m *OrderedMap[T]) Contains(key T) bool {
