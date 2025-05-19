@@ -9,6 +9,12 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+const (
+	fourBits  = 4
+	sixBits   = 6
+	eightBits = 8
+)
+
 type Option func(*GamePerson)
 
 func WithName(name string) func(*GamePerson) {
@@ -39,14 +45,14 @@ func WithGold(gold int) func(*GamePerson) {
 func WithMana(mana int) func(*GamePerson) {
 	return func(person *GamePerson) {
 		person.manaAndRespect[0] = byte(mana)
-		person.manaAndRespect[1] = byte(mana >> 8)
+		person.manaAndRespect[1] = byte(mana >> eightBits)
 	}
 }
 
 func WithHealth(health int) func(*GamePerson) {
 	return func(person *GamePerson) {
 		person.healthAndStrength[0] = byte(health)
-		person.healthAndStrength[1] = byte(health >> 8)
+		person.healthAndStrength[1] = byte(health >> eightBits)
 	}
 }
 
@@ -113,8 +119,8 @@ type GamePerson struct {
 	z                        int32
 	gold                     uint32
 	personName               [42]byte
-	healthAndStrength        [2]byte
-	manaAndRespect           [2]byte
+	healthAndStrength        [2]byte // byte0: xxxxxxxx, byte1: xxyyyyyy, x = health, y = strength
+	manaAndRespect           [2]byte // byte0: xxxxxxxx, byte1: xxyyyyyy, x = mana, y = respect
 	levelAndExperience       byte
 	homeWeaponFamilyFraction byte
 }
@@ -153,27 +159,27 @@ func (p *GamePerson) Gold() int {
 }
 
 func (p *GamePerson) Mana() int {
-	return int(p.manaAndRespect[0]) + int(p.manaAndRespect[1]<<6)>>6*256
+	return int(p.manaAndRespect[0]) + int(p.manaAndRespect[1]<<sixBits)>>sixBits*256
 }
 
 func (p *GamePerson) Health() int {
-	return int(p.healthAndStrength[0]) + int(p.healthAndStrength[1]<<6)>>6*256
+	return int(p.healthAndStrength[0]) + int(p.healthAndStrength[1]<<sixBits)>>sixBits*256
 }
 
 func (p *GamePerson) Respect() int {
-	return int(p.manaAndRespect[1] >> 4)
+	return int(p.manaAndRespect[1] >> fourBits)
 }
 
 func (p *GamePerson) Strength() int {
-	return int(p.healthAndStrength[1] >> 4)
+	return int(p.healthAndStrength[1] >> fourBits)
 }
 
 func (p *GamePerson) Experience() int {
-	return int((p.levelAndExperience << 4) >> 4)
+	return int((p.levelAndExperience << fourBits) >> fourBits)
 }
 
 func (p *GamePerson) Level() int {
-	return int(p.levelAndExperience >> 4)
+	return int(p.levelAndExperience >> fourBits)
 }
 
 func (p *GamePerson) HasHouse() bool {
