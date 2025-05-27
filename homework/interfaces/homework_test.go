@@ -37,8 +37,11 @@ func (c *Container) Resolve(name string) (interface{}, error) {
 	if !ok {
 		return nil, errors.New("constructor is not founded")
 	}
-	constructor := constructorFn.(func() any)
-	return constructor(), nil
+	constructor, ok := constructorFn.(func() any)
+	if ok {
+		return constructor(), nil
+	}
+	return constructor, nil
 }
 
 func TestDIContainer(t *testing.T) {
