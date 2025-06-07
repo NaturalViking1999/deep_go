@@ -2,7 +2,6 @@ package main
 
 import (
 	"reflect"
-	"sort"
 	"testing"
 	"unsafe"
 
@@ -12,10 +11,9 @@ import (
 // go test -v homework_test.go
 
 func Defragment(memory []byte, pointers []unsafe.Pointer) {
-	sort.Slice(memory, func(i, j int) bool {
-		return memory[i] > memory[j]
-	})
 	for i := range pointers {
+		index := int(uintptr(pointers[i]) - uintptr(unsafe.Pointer(&memory[i])))
+		memory[i], memory[i+index] = memory[i+index], memory[i]
 		pointers[i] = unsafe.Pointer(&memory[i])
 	}
 }
